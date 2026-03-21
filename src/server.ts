@@ -1,6 +1,6 @@
+import type { FrameworkAdapter } from '@/frameworks/index';
 import fs from 'node:fs';
 import net from 'node:net';
-import type { FrameworkAdapter } from './frameworks/index';
 
 /** Marks the end of a streamed response. */
 const EOT = '\n---END---\n';

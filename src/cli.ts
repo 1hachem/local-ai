@@ -1,6 +1,6 @@
+import { frameworkNames, frameworks } from '@/frameworks/index';
+import { startServer } from '@/server';
 import { binary, command, number, option, optional, run, string } from 'cmd-ts';
-import { frameworkNames, frameworks } from './frameworks/index';
-import { startServer } from './server';
 
 const app = command({
   name: 'local-ai',

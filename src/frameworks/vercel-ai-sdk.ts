@@ -1,24 +1,17 @@
+import { env } from '@/env';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { streamText } from 'ai';
 import type { FrameworkAdapter } from './index';
 
-const DEFAULT_MODEL = 'minimax/minimax-m2.7';
-
 export function createAdapter(): FrameworkAdapter {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    throw new Error(
-      'OPENROUTER_API_KEY environment variable is required.\n' +
-        'Get one at https://openrouter.ai/keys'
-    );
-  }
-
-  const openrouter = createOpenRouter({ apiKey });
+  const openrouter = createOpenRouter({ apiKey: env.OPENROUTER_API_KEY });
 
   return {
     async streamText(prompt, onChunk) {
+      const model = DEFAULT_MODEL;
+
       const result = streamText({
-        model: openrouter(DEFAULT_MODEL),
+        model: openrouter(model),
         prompt,
         onError({ error }) {
           console.error('[vercel-ai-sdk] stream error:', error);
