@@ -1,9 +1,9 @@
-import net from "node:net";
-import fs from "node:fs";
-import type { FrameworkAdapter } from "./frameworks/index.js";
+import fs from 'node:fs';
+import net from 'node:net';
+import type { FrameworkAdapter } from './frameworks/index';
 
 /** Marks the end of a streamed response. */
-const EOT = "\n---END---\n";
+const EOT = '\n---END---\n';
 
 function log(msg: string) {
   process.stderr.write(`[local-ai] ${msg}\n`);
@@ -20,19 +20,21 @@ function handleConnection(socket: net.Socket, adapter: FrameworkAdapter) {
   const remoteId =
     socket.remoteAddress && socket.remotePort
       ? `${socket.remoteAddress}:${socket.remotePort}`
-      : "unix-client";
+      : 'unix-client';
 
   log(`connection from ${remoteId}`);
 
   socket.setKeepAlive(true, 30_000);
 
-  let buffer = "";
+  let buffer = '';
   let processing = false;
   const queue: string[] = [];
 
   async function processPrompt(prompt: string) {
     processing = true;
-    log(`prompt from ${remoteId}: ${prompt.slice(0, 80)}${prompt.length > 80 ? "..." : ""}`);
+    log(
+      `prompt from ${remoteId}: ${prompt.slice(0, 80)}${prompt.length > 80 ? '...' : ''}`
+    );
 
     try {
       await adapter.streamText(prompt, (chunk) => {
@@ -61,11 +63,11 @@ function handleConnection(socket: net.Socket, adapter: FrameworkAdapter) {
     }
   }
 
-  socket.on("data", (data) => {
-    buffer += data.toString("utf-8");
+  socket.on('data', (data) => {
+    buffer += data.toString('utf-8');
 
     let newlineIdx: number;
-    while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
+    while ((newlineIdx = buffer.indexOf('\n')) !== -1) {
       const line = buffer.slice(0, newlineIdx).trim();
       buffer = buffer.slice(newlineIdx + 1);
 
@@ -79,7 +81,7 @@ function handleConnection(socket: net.Socket, adapter: FrameworkAdapter) {
     }
   });
 
-  socket.on("end", () => {
+  socket.on('end', () => {
     // If there's remaining buffered text without a trailing newline, treat it as a prompt
     const remaining = buffer.trim();
     if (remaining.length > 0) {
@@ -92,7 +94,7 @@ function handleConnection(socket: net.Socket, adapter: FrameworkAdapter) {
     log(`disconnected: ${remoteId}`);
   });
 
-  socket.on("error", (err) => {
+  socket.on('error', (err) => {
     log(`socket error (${remoteId}): ${err.message}`);
   });
 }
@@ -121,10 +123,10 @@ export function startServer(options: ServerOptions): ServerHandle {
   // TCP server
   if (port !== undefined) {
     const tcpServer = createServer();
-    tcpServer.listen(port, "0.0.0.0", () => {
+    tcpServer.listen(port, '0.0.0.0', () => {
       log(`listening on tcp://0.0.0.0:${port}`);
     });
-    tcpServer.on("error", (err) => {
+    tcpServer.on('error', (err) => {
       console.error(`[local-ai] TCP server error: ${err.message}`);
       process.exit(1);
     });
@@ -144,7 +146,7 @@ export function startServer(options: ServerOptions): ServerHandle {
     unixServer.listen(socketPath, () => {
       log(`listening on unix://${socketPath}`);
     });
-    unixServer.on("error", (err) => {
+    unixServer.on('error', (err) => {
       console.error(`[local-ai] Unix socket server error: ${err.message}`);
       process.exit(1);
     });
@@ -153,7 +155,7 @@ export function startServer(options: ServerOptions): ServerHandle {
 
   // Cleanup on exit
   function cleanup() {
-    log("shutting down...");
+    log('shutting down...');
     for (const s of servers) {
       s.close();
     }
@@ -166,11 +168,11 @@ export function startServer(options: ServerOptions): ServerHandle {
     }
   }
 
-  process.on("SIGINT", () => {
+  process.on('SIGINT', () => {
     cleanup();
     process.exit(0);
   });
-  process.on("SIGTERM", () => {
+  process.on('SIGTERM', () => {
     cleanup();
     process.exit(0);
   });

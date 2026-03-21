@@ -16,7 +16,7 @@ export interface FrameworkAdapter {
 /** Lazy-loaded registry of available framework adapters. */
 export const frameworks: Record<string, () => Promise<FrameworkAdapter>> = {
   vercel: async () => {
-    const mod = await import("./vercel-ai-sdk.js");
+    const mod = await import('./vercel-ai-sdk.js');
     return mod.createAdapter();
   },
 };
