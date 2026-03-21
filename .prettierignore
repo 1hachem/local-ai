@@ -1,0 +1,12 @@
+# pnpm
+pnpm-lock.yaml
+
+# don't touch helm templating
+charts/**
+
+# markdown
+*.mdx
+*.md
+
+# drizzle generated files
+**/migrations/**/*.json

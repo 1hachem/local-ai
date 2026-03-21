@@ -22,11 +22,15 @@
   ],
   "dependencies": {
     "@openrouter/ai-sdk-provider": "^2.3.3",
+    "@t3-oss/env-core": "^0.13.10",
     "ai": "^6.0.134",
-    "cmd-ts": "^0.15.0"
+    "cmd-ts": "^0.15.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
+    "prettier-plugin-organize-imports": "^4.3.0",
+    "prettier-plugin-tailwindcss": "^0.7.2",
     "tsc": "^2.0.4",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
