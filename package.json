@@ -10,6 +10,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx --env-file=.env src/cli.ts --framework vercel --port 3005",
+    "dev-socket": "tsx --env-file=.env src/cli.ts --framework vercel --socket /tmp/local-ai.sock",
     "start": "node --env-file=.env dist/cli.js"
   },
   "author": "1hachem",
