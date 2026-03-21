@@ -1,0 +1,33 @@
+{
+  "name": "local-ai",
+  "version": "1.0.0",
+  "description": "cli helper to run scripts for different ai frameworks chat loops and workflows",
+  "type": "module",
+  "main": "dist/cli.js",
+  "bin": {
+    "local-ai": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx --env-file=.env src/cli.ts --framework vercel --port 3005",
+    "start": "node --env-file=.env dist/cli.js"
+  },
+  "author": "1hachem",
+  "license": "ISC",
+  "keywords": [
+    "ai",
+    "mcp",
+    "local"
+  ],
+  "dependencies": {
+    "@openrouter/ai-sdk-provider": "^2.3.3",
+    "ai": "^6.0.134",
+    "cmd-ts": "^0.15.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "tsc": "^2.0.4",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
