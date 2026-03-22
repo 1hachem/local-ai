@@ -1,22 +1,57 @@
+import type {
+  ClientMessage,
+  ServerMessage,
+} from '@/const';
 import type { FrameworkAdapter } from '@/frameworks/index';
+import type { MessageStore } from '@/store/index';
+import { InMemoryStore } from '@/store/index';
 import fs from 'node:fs';
 import net from 'node:net';
 
-/** Marks the end of a streamed response. */
-const EOT = '\n---END---\n';
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 function log(msg: string) {
   process.stderr.write(`[local-ai] ${msg}\n`);
 }
 
+/** Send an NDJSON message to a socket (JSON + newline). */
+function send(socket: net.Socket, msg: ServerMessage) {
+  if (!socket.destroyed) {
+    socket.write(JSON.stringify(msg) + '\n');
+  }
+}
+
+/** Try to parse a single NDJSON line. Returns `null` on failure. */
+function parseLine(line: string): ClientMessage | null {
+  try {
+    return JSON.parse(line) as ClientMessage;
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Connection handler
+// ---------------------------------------------------------------------------
+
 /**
  * Handle a single socket connection.
  *
- * Protocol (per connection, repeatable):
- *   Client  ->  prompt text terminated by \n
- *   Server  <-  streamed text chunks, ending with \n\x04\n
+ * Protocol (NDJSON – one JSON object per line):
+ *
+ *   1. Client sends a HandshakeRequest  →  Server replies with HandshakeResponse
+ *   2. Client sends PromptRequest(s)    →  Server streams ChunkResponse(s) + DoneResponse
+ *
+ * The server maintains conversation history in the provided MessageStore
+ * so each subsequent prompt includes the full history.
  */
-function handleConnection(socket: net.Socket, adapter: FrameworkAdapter) {
+function handleConnection(
+  socket: net.Socket,
+  adapter: FrameworkAdapter,
+  store: MessageStore,
+) {
   const remoteId =
     socket.remoteAddress && socket.remotePort
       ? `${socket.remoteAddress}:${socket.remotePort}`
@@ -27,32 +62,47 @@ function handleConnection(socket: net.Socket, adapter: FrameworkAdapter) {
   socket.setKeepAlive(true, 30_000);
 
   let buffer = '';
+  let sessionId: string | null = null;
   let processing = false;
   const queue: string[] = [];
 
-  async function processPrompt(prompt: string) {
+  // ------ prompt processing -----------------------------------------------
+
+  async function processPrompt(content: string) {
+    if (!sessionId) {
+      send(socket, { type: 'error', message: 'handshake required before sending prompts' });
+      return;
+    }
+
     processing = true;
     log(
-      `prompt from ${remoteId}: ${prompt.slice(0, 80)}${prompt.length > 80 ? '...' : ''}`
+      `prompt from ${remoteId} [${sessionId}]: ${content.slice(0, 80)}${content.length > 80 ? '...' : ''}`,
     );
 
+    // Append the user message to history
+    store.addMessage(sessionId, { role: 'user', content });
+
+    // Collect the full assistant response so we can persist it
+    let assistantContent = '';
+
     try {
-      await adapter.streamText(prompt, (chunk) => {
-        if (!socket.destroyed) {
-          socket.write(chunk);
-        }
+      const messages = store.getMessages(sessionId);
+      await adapter.streamText(messages, (chunk) => {
+        assistantContent += chunk;
+        send(socket, { type: 'chunk', content: chunk });
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       log(`error: ${msg}`);
-      if (!socket.destroyed) {
-        socket.write(`\n[error] ${msg}`);
-      }
+      send(socket, { type: 'error', message: msg });
     }
 
-    if (!socket.destroyed) {
-      socket.write(EOT);
+    // Persist the assistant's full reply
+    if (assistantContent.length > 0) {
+      store.addMessage(sessionId, { role: 'assistant', content: assistantContent });
     }
+
+    send(socket, { type: 'done' });
 
     processing = false;
 
@@ -60,6 +110,49 @@ function handleConnection(socket: net.Socket, adapter: FrameworkAdapter) {
     if (queue.length > 0) {
       const next = queue.shift()!;
       await processPrompt(next);
+    }
+  }
+
+  // ------ handshake -------------------------------------------------------
+
+  function handleHandshake(msg: ClientMessage & { type: 'handshake' }) {
+    if (msg.sessionId && store.hasSession(msg.sessionId)) {
+      sessionId = msg.sessionId;
+      log(`resumed session ${sessionId} for ${remoteId}`);
+    } else {
+      sessionId = store.createSession();
+      log(`new session ${sessionId} for ${remoteId}`);
+    }
+    send(socket, { type: 'handshake', sessionId });
+  }
+
+  // ------ incoming data (NDJSON framing) ----------------------------------
+
+  function handleLine(line: string) {
+    const msg = parseLine(line);
+    if (!msg) {
+      send(socket, { type: 'error', message: 'invalid JSON' });
+      return;
+    }
+
+    switch (msg.type) {
+      case 'handshake':
+        handleHandshake(msg);
+        break;
+
+      case 'prompt':
+        if (processing) {
+          queue.push(msg.content);
+        } else {
+          processPrompt(msg.content);
+        }
+        break;
+
+      default:
+        send(socket, {
+          type: 'error',
+          message: `unknown message type: ${(msg as { type: string }).type}`,
+        });
     }
   }
 
@@ -72,24 +165,15 @@ function handleConnection(socket: net.Socket, adapter: FrameworkAdapter) {
       buffer = buffer.slice(newlineIdx + 1);
 
       if (line.length === 0) continue;
-
-      if (processing) {
-        queue.push(line);
-      } else {
-        processPrompt(line);
-      }
+      handleLine(line);
     }
   });
 
   socket.on('end', () => {
-    // If there's remaining buffered text without a trailing newline, treat it as a prompt
+    // Process any remaining buffered data
     const remaining = buffer.trim();
     if (remaining.length > 0) {
-      if (processing) {
-        queue.push(remaining);
-      } else {
-        processPrompt(remaining);
-      }
+      handleLine(remaining);
     }
     log(`disconnected: ${remoteId}`);
   });
@@ -99,25 +183,36 @@ function handleConnection(socket: net.Socket, adapter: FrameworkAdapter) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Server lifecycle
+// ---------------------------------------------------------------------------
+
 export interface ServerOptions {
   adapter: FrameworkAdapter;
   port?: number;
   socketPath?: string;
+  /** Message store implementation.  Defaults to InMemoryStore. */
+  store?: MessageStore;
 }
 
 export interface ServerHandle {
   /** All running net.Server instances */
   servers: net.Server[];
+  /** The message store used by this server */
+  store: MessageStore;
   /** Gracefully shut everything down */
   close(): Promise<void>;
 }
 
 export function startServer(options: ServerOptions): ServerHandle {
   const { adapter, port, socketPath } = options;
+  const store: MessageStore = options.store ?? new InMemoryStore();
   const servers: net.Server[] = [];
 
   function createServer(): net.Server {
-    return net.createServer((socket) => handleConnection(socket, adapter));
+    return net.createServer((socket) =>
+      handleConnection(socket, adapter, store),
+    );
   }
 
   // TCP server
@@ -179,6 +274,7 @@ export function startServer(options: ServerOptions): ServerHandle {
 
   return {
     servers,
+    store,
     async close() {
       cleanup();
     },

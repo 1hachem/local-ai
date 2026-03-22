@@ -4,13 +4,19 @@
  * Every AI framework (vercel-ai-sdk, langchain, llamaindex, …) implements
  * this contract so the socket server can drive them uniformly.
  */
+
+import type { Message } from '@/const';
+
 export interface FrameworkAdapter {
   /**
-   * Stream a text response for the given prompt.
+   * Stream a text response for the given conversation history.
    * Each chunk of generated text is forwarded to `onChunk`.
    * The returned promise resolves when generation is complete.
    */
-  streamText(prompt: string, onChunk: (text: string) => void): Promise<void>;
+  streamText(
+    messages: Message[],
+    onChunk: (text: string) => void,
+  ): Promise<void>;
 }
 
 /** Lazy-loaded registry of available framework adapters. */

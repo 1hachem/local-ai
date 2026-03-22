@@ -1,3 +1,4 @@
+import { DEFAULT_MODEL } from '@/const';
 import { env } from '@/env';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { streamText } from 'ai';
@@ -7,12 +8,12 @@ export function createAdapter(): FrameworkAdapter {
   const openrouter = createOpenRouter({ apiKey: env.OPENROUTER_API_KEY });
 
   return {
-    async streamText(prompt, onChunk) {
+    async streamText(messages, onChunk) {
       const model = DEFAULT_MODEL;
 
       const result = streamText({
         model: openrouter(model),
-        prompt,
+        messages,
         onError({ error }) {
           console.error('[vercel-ai-sdk] stream error:', error);
         },
