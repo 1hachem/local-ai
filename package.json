@@ -9,10 +9,10 @@
   },
   "scripts": {
     "build": "tsc",
-    "server": "tsx --env-file=.env src/cli.ts --framework vercel --port 3005",
-    "server:socket": "tsx --env-file=.env src/cli.ts --framework vercel --socket /tmp/local-ai.sock",
-    "client": "tsx src/client.ts --port 3005",
-    "client:socket": "tsx src/client.ts --socket /tmp/local-ai.sock",
+    "server": "tsx --env-file=.env src/cli.ts server --framework vercel --port 3005",
+    "server:socket": "tsx --env-file=.env src/cli.ts server --framework vercel --socket /tmp/local-ai.sock",
+    "client": "tsx src/cli.ts client --port 3005",
+    "client:socket": "tsx src/cli.ts client --socket /tmp/local-ai.sock",
     "start": "node --env-file=.env dist/cli.js"
   },
   "author": "1hachem",
