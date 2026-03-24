@@ -8,7 +8,7 @@
     "local-ai": "dist/cli.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "esbuild src/cli.ts --bundle --platform=node --format=esm --outfile=dist/cli.js --banner:js='#!/usr/bin/env node' --packages=external",
     "server": "tsx --env-file=.env src/cli.ts server --framework vercel --port 3005",
     "server:socket": "tsx --env-file=.env src/cli.ts server --framework vercel --socket /tmp/local-ai.sock",
     "client": "tsx src/cli.ts client --port 3005",
@@ -31,9 +31,9 @@
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
+    "esbuild": "^0.25.0",
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-tailwindcss": "^0.7.2",
-    "tsc": "^2.0.4",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }
