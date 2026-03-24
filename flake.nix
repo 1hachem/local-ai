@@ -97,15 +97,16 @@
 
           port = lib.mkOption {
             type = lib.types.nullOr lib.types.port;
-            default = 3005;
-            description = "TCP port to listen on. Set to null to disable.";
+            default = null;
+            example = 3005;
+            description = "TCP port to listen on. Mutually exclusive with socket.";
           };
 
           socket = lib.mkOption {
             type = lib.types.nullOr lib.types.str;
             default = null;
             example = "/run/local-ai/local-ai.sock";
-            description = "Unix domain socket path to listen on. Set to null to disable.";
+            description = "Unix domain socket path to listen on. Mutually exclusive with port.";
           };
 
           environmentFile = lib.mkOption {
@@ -122,7 +123,11 @@
           assertions = [
             {
               assertion = cfg.port != null || cfg.socket != null;
-              message = "services.local-ai: at least one of port or socket must be set.";
+              message = "services.local-ai: either port or socket must be set.";
+            }
+            {
+              assertion = cfg.port == null || cfg.socket == null;
+              message = "services.local-ai: port and socket are mutually exclusive; set one, not both.";
             }
           ];
 
