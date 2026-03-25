@@ -2,3 +2,5 @@ node_modules/
 dist/
 .env
 result
+
+*.qcow2
