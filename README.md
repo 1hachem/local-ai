@@ -153,6 +153,19 @@ local-ai client --port 3005
 - journalctl logs on whole workspace for visibility and event driven actions
 
 ## TODO
-- [x] use cmd-ts for client cli
-- [x] add nixos derivation to run the server as systemd and the client cli
+
+deployment
+- [ ] rebuild vm with 0 down time 
+- [ ] add sops for password and for api key creds
+- [ ] add an AI gateway
+- [ ] deploy with nixos-anywhere
+
+communication
 - [ ] add option to continue from sessionId
+
+abilities
+- [ ] add mcp deployments
+- [ ] add personality and prompt
+
+security
+- [ ] setup ACL
