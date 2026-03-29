@@ -38,6 +38,7 @@
           environment.systemPackages = [
             local-ai.packages.${system}.local-ai
           ];
+
           programs.zsh.enable = true;
 
           services.openssh = {
@@ -75,7 +76,26 @@
           commonModules
           ++ [
             {
-              boot.loader.grub.device = "nodev";
+              boot.loader.systemd-boot.enable = true;
+              boot.loader.efi.canTouchEfiVariables = true;
+
+              services.xserver.enable = true;
+              services.xserver.displayManager.gdm.enable = true;
+              services.xserver.desktopManager.gnome.enable = true;
+
+              # Use bridged or user-mode networking with port forwarding
+              virtualisation.vmVariant = {
+                virtualisation = {
+                  # Forward host port 2222 to guest port 22
+                  forwardPorts = [
+                    {
+                      from = "host";
+                      host.port = 2222;
+                      guest.port = 22;
+                    }
+                  ];
+                };
+              };
             }
           ];
       };
