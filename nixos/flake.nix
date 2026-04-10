@@ -62,7 +62,15 @@
         modules =
           commonModules
           ++ [
-            {boot.isNspawnContainer = true;}
+            {
+              boot.isContainer = true;
+              networking.firewall.enable = false;
+              networking.useHostResolvConf = nixpkgs.lib.mkForce false;
+
+              services.resolved.enable = true;
+              nix.settings.experimental-features = ["nix-command" "flakes"];
+              nix.settings.sandbox = false; # required without user namespaces
+            }
           ];
       };
 
