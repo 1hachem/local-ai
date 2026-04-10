@@ -167,5 +167,8 @@ abilities
 - [ ] add mcp deployments
 - [ ] add personality and prompt
 
+prompt
+- [ ] manage tasks with taskworrier
+
 security
 - [ ] setup ACL
